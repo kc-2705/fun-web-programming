@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Interactive Garden</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js"
+            type="module">
+    </script>
+
+</head>
+<body>
+  <svg id="garden" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="ground"></div>
+
+  <div id="controls">
+    <button id="modeToggle" class="ctrl" title="Toggle dark / light">☀️</button>
+    <button id="musicToggle" class="ctrl off" title="Toggle music">🎵</button>
+  </div>
+
+  <audio id="bgMusic" loop>
+    <source src="roja.mp3" type="audio/mpeg">
+  </audio>
+
+<script src="script.js"></script>
+
+</body>
+</html>

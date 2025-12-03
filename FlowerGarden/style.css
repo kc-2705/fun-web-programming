@@ -1,0 +1,137 @@
+:root{
+  --ground-height: 6px;
+  --ground-glow: #b37a42;
+}
+
+html,body{
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  background: linear-gradient(#c9efff, #82d0ff); /* day */
+  transition: background 1.2s ease;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+}
+
+body.dark {
+  background: linear-gradient(#020817, #0a1a33); /* night */
+}
+
+#garden {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
+#ground {
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  height:var(--ground-height);
+  background:#000;
+  box-shadow: 0 0 18px 6px var(--ground-glow);
+  z-index:5;
+}
+
+#controls {
+  position:fixed;
+  top:18px;
+  right:18px;
+  display:flex;
+  gap:10px;
+  z-index:999;
+}
+
+.ctrl {
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  border:none;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  font-size:20px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.ctrl:active { transform: scale(.96); }
+
+#musicToggle.off::after {
+  content:"✖";
+  position:absolute;
+  right:-3px;
+  top:-4px;
+  color:#e3342f;
+  font-size:16px;
+  font-weight:700;
+}
+
+
+body.dark .flower-petal,
+body.dark .flower-center {
+  filter: drop-shadow(0 0 8px rgba(250, 196, 239, 0.9)) 
+          drop-shadow(0 0 4px rgba(255,120,200,0.6));
+}
+
+.stem {
+  stroke:#0b7a3a;
+  stroke-width:4;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.leaf {
+  fill:#2d8a3f;
+  transform-origin:center;
+  transform-box:fill-box;
+}
+
+.bud {
+  transform-origin:center;
+  transform-box:fill-box;
+  transform:scale(0);
+  transition:transform 200ms ease-out;
+}
+
+.flower-petal {
+  transform-origin:center;
+  transform-box:fill-box;
+  transform:translate(0,0) scale(0);
+  opacity:0;
+}
+
+.petal-animate {
+  transition:transform 420ms cubic-bezier(.2,.9,.2,1),
+             opacity 320ms linear;
+  opacity:1;
+}
+
+.flower-center { fill:#f8d56f; }
+
+/* fireflies */
+.firefly {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffec9 0%, #ffe57d 45%, transparent 70%);
+  pointer-events: none;
+  animation: fireflyMove 6s infinite ease-in-out alternate;
+  z-index: 150;
+  opacity: 0;
+}
+
+@keyframes fireflyMove {
+  0% { transform: translate(0,0) scale(.8); }
+  50%{ transform: translate(40px,-20px) scale(1); }
+  100%{ transform: translate(-20px,30px) scale(.7); }
+}
+
+body.dark .firefly {
+  opacity: 1;
+}

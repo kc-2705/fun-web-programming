@@ -1,0 +1,95 @@
+.main-bg {
+  background-color: #ffd6d6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+nav {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+nav button {
+  background-color: #ff9999;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+nav button.active {
+  background-color: #fff;
+  color: #b3003b;
+  border: 1px solid #b3003b;
+}
+
+nav button:hover {
+  transform: scale(1.05);
+}
+
+.main-container {
+  background-color: white;
+  width: 70%;
+  height: 70vh; /* fixed size container */
+  margin-top: 20px;
+  border-radius: 10px;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.1);
+}
+
+
+.main-page {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background-color: rgba(255, 192, 203, 0.3);
+}
+
+.hearts-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.hearts-background::before,
+.hearts-background::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://upload.wikimedia.org/wikipedia/commons/1/13/Red_Heart.svg");
+  background-size: 20px 20px;
+  animation: floatHearts 20s linear infinite;
+  opacity: 0.1;
+}
+
+@keyframes floatHearts {
+  0% {
+    background-position: 0 100%;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+.tabs,
+.tab-container {
+  position: relative;
+  z-index: 2;
+}

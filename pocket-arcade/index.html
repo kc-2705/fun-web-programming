@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one cabinet column — game picker strip on top, a single lit play stage below. Deliberately single dark "arcade at night" look. */
+:root{
+  --bg:#1b1936; --panel:#252350; --panel-2:#2e2b5f; --line:#3d3a78;
+  --fg:#f4f1ff; --muted:#aaa5d9; --ink:#14122b;
+  --sun:#ffc23d; --coral:#ff6b6b; --mint:#4fe0b0; --sky:#5cb8ff; --mole:#c98b5a;
+  --f-display:"Bungee","Arial Black",Impact,sans-serif;
+  --f-body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:14px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding:28px 16px 48px;display:flex;flex-direction:column;gap:20px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,6vw,46px);line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+h1 .a{color:var(--sun)} h1 .b{color:var(--coral)}
+header p{margin:0;color:var(--muted);max-width:42ch}
+
+.picker{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.pick{flex:1 0 128px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;
+  background:var(--panel);border:2px solid var(--line);border-radius:var(--r);padding:12px 14px;transition:transform .12s,border-color .12s}
+.pick:hover{transform:translateY(-2px)}
+.pick .nm{font-family:var(--f-display);font-size:16px;line-height:1.2}
+.pick .ds{font-size:12.5px;color:var(--muted)}
+.pick .dot{width:10px;height:10px;border-radius:50%;margin-bottom:6px;background:var(--c)}
+.pick[aria-selected="true"]{border-color:var(--c);background:var(--panel-2)}
+
+.stage{background:var(--panel);border:2px solid var(--line);border-radius:20px;padding:20px 16px 24px}
+.game{display:flex;flex-direction:column;align-items:center;gap:16px}
+.ghead{width:100%;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.ghead h2{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;line-height:1.1}
+.ghead p{margin:2px 0 0;color:var(--muted);font-size:13.5px;max-width:46ch}
+.stats{display:flex;gap:8px}
+.stat{background:var(--ink);border-radius:10px;padding:6px 12px;min-width:70px;text-align:center}
+.stat b{display:block;font-family:var(--f-display);font-weight:400;font-size:20px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.btn{background:var(--sun);color:var(--ink);border:0;border-radius:999px;padding:9px 20px;font-weight:800;box-shadow:0 3px 0 #b8861d;transition:transform .08s}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #b8861d}
+.btn.ghost{background:transparent;color:var(--fg);border:2px solid var(--line);box-shadow:none}
+.seg{display:inline-flex;background:var(--ink);border-radius:999px;padding:3px}
+.seg button{background:none;border:0;border-radius:999px;padding:6px 14px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--fg)}
+.hint{font-size:12.5px;color:var(--muted);text-align:center;margin:0}
+
+.board{position:relative;width:100%;max-width:420px}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;
+  background:color-mix(in srgb,var(--ink) 78%,transparent);border-radius:var(--r);padding:20px;backdrop-filter:blur(2px)}
+.overlay strong{font-family:var(--f-display);font-weight:400;font-size:26px;color:var(--sun)}
+.overlay span{color:var(--fg);max-width:30ch}
+
+/* Snake */
+#snake-cv{display:block;width:100%;aspect-ratio:1;border-radius:var(--r);touch-action:none;background:var(--ink)}
+.dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,44px);gap:6px}
+.dpad button{background:var(--panel-2);border:2px solid var(--line);border-radius:10px;font-size:18px;line-height:1}
+.dpad [data-d="up"]{grid-column:2} .dpad [data-d="left"]{grid-column:1;grid-row:2} .dpad [data-d="down"]{grid-column:2;grid-row:2} .dpad [data-d="right"]{grid-column:3;grid-row:2}
+
+/* 2048 */
+#g2048-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--ink);padding:8px;border-radius:var(--r);touch-action:none;aspect-ratio:1}
+.cell{border-radius:10px;background:var(--panel-2);display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-display);font-size:clamp(20px,7vw,34px);color:var(--ink);font-variant-numeric:tabular-nums}
+.cell.d3{font-size:clamp(17px,5.6vw,28px)} .cell.d4{font-size:clamp(14px,4.4vw,22px)}
+.t2{background:#e9e4ff}.t4{background:#d4ccff}.t8{background:#ffd98a}.t16{background:#ffc23d}.t32{background:#ff9f5a}
+.t64{background:#ff6b6b}.t128{background:#4fe0b0}.t256{background:#2fc79a}.t512{background:#5cb8ff}.t1024{background:#3d8ff0;color:var(--fg)}
+.t2048,.t4096{background:#f8f04a;box-shadow:0 0 18px #f8f04a88}
+.cell.new{animation:pop .18s ease-out}.cell.merge{animation:bump .18s ease-out}
+@keyframes pop{from{transform:scale(.4);opacity:.3}to{transform:scale(1);opacity:1}}
+@keyframes bump{50%{transform:scale(1.12)}}
+
+/* Memory */
+#mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.card{aspect-ratio:1;border:0;padding:0;background:none;perspective:600px}
+.card .in{position:relative;display:block;width:100%;height:100%;transition:transform .35s;transform-style:preserve-3d}
+.card.open .in,.card.done .in{transform:rotateY(180deg)}
+.card .f,.card .b{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center}
+.card .b{background:var(--sky);background-image:radial-gradient(circle at 50% 50%,transparent 28%,rgba(20,18,43,.18) 29% 38%,transparent 39%);border:3px solid #ffffff33}
+.card .f{background:#f4f1ff;transform:rotateY(180deg);font-size:clamp(26px,8vw,40px)}
+.card.done .f{background:var(--mint)}
+
+/* Whack */
+#whack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.hole{position:relative;aspect-ratio:1;border:0;border-radius:16px;background:var(--panel-2);overflow:hidden;padding:0;touch-action:manipulation}
+.hole::after{content:"";position:absolute;left:12%;right:12%;bottom:10%;height:22%;border-radius:50%;background:var(--ink);z-index:0}
+.mole{position:absolute;left:22%;right:22%;bottom:16%;height:62%;border-radius:50% 50% 30% 30%;background:var(--mole);z-index:1;
+  transform:translateY(130%);transition:transform .12s ease-out}
+.mole::before,.mole::after{content:"";position:absolute;top:28%;width:12%;aspect-ratio:1;border-radius:50%;background:var(--ink)}
+.mole::before{left:28%}.mole::after{right:28%}
+.mole i{position:absolute;left:38%;right:38%;top:46%;height:14%;border-radius:50%;background:var(--coral)}
+.hole.up .mole{transform:translateY(0)}
+.hole.gold .mole{background:var(--sun)}
+.hole.bonk .mole{transform:translateY(20%) scale(.9,.7);background:var(--muted)}
+.hole .plus{position:absolute;top:8%;left:0;right:0;text-align:center;font-family:var(--f-display);color:var(--sun);z-index:2;animation:rise .5s forwards}
+@keyframes rise{to{transform:translateY(-30px);opacity:0}}
+.timebar{width:100%;max-width:420px;height:8px;background:var(--ink);border-radius:99px;overflow:hidden}
+.timebar div{height:100%;background:var(--mint);width:100%;transition:width .1s linear}
+
+/* Tic-tac-toe */
+#ttt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--line);border-radius:var(--r);padding:8px}
+.sq{aspect-ratio:1;border:0;border-radius:10px;background:var(--panel-2);font-family:var(--f-display);font-size:clamp(36px,12vw,64px);line-height:1}
+.sq.X{color:var(--sky)}.sq.O{color:var(--coral)}
+.sq.win{background:var(--sun);color:var(--ink)}
+.status{font-weight:800;min-height:1.5em;text-align:center;margin:0}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Pocket <span class="a">Ar</span><span class="b">cade</span></h1>
+    <p>Five quick games for a short break. Works with a keyboard, mouse, or touch. Your best scores stay in this browser.</p>
+  </header>
+
+  <nav class="picker" role="tablist" aria-label="Choose a game">
+    <button class="pick" role="tab" data-g="snake" style="--c:var(--mint)"><i class="dot"></i><span class="nm">Snake</span><span class="ds">Eat, grow, don't crash</span></button>
+    <button class="pick" role="tab" data-g="g2048" style="--c:var(--sun)"><i class="dot"></i><span class="nm">2048</span><span class="ds">Slide and merge tiles</span></button>
+    <button class="pick" role="tab" data-g="mem" style="--c:var(--sky)"><i class="dot"></i><span class="nm">Memory</span><span class="ds">Find the fruit pairs</span></button>
+    <button class="pick" role="tab" data-g="whack" style="--c:var(--mole)"><i class="dot"></i><span class="nm">Whack</span><span class="ds">30 seconds of moles</span></button>
+    <button class="pick" role="tab" data-g="ttt" style="--c:var(--coral)"><i class="dot"></i><span class="nm">Tic-Tac-Toe</span><span class="ds">Beat the computer</span></button>
+  </nav>
+
+  <main class="stage">
+    <!-- SNAKE -->
+    <section class="game" id="snake" role="tabpanel">
+      <div class="ghead">
+        <div><h2>Snake</h2><p>Arrow keys or WASD to steer, Space to pause. On a phone, swipe on the board or use the pad.</p></div>
+        <div class="stats"><div class="stat"><b id="snake-score">0</b><span>Apples</span></div><div class="stat"><b id="snake-best">0</b><span>Best</span></div></div>
+      </div>
+      <div class="board"><canvas id="snake-cv" aria-label="Snake board"></canvas><div class="overlay" id="snake-ov"></div></div>
+      <div class="row"><button class="btn" id="snake-go">Start</button></div>
+      <div class="dpad" aria-label="Direction pad">
+        <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button>
+        <button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
+      </div>
+    </section>
+
+    <!-- 2048 -->
+    <section class="game" id="g2048" role="tabpanel" hidden>
+      <div class="ghead">
+        <div><h2>2048</h2><p>Arrow keys or swipe to slide every tile. Two matching tiles merge into one. Reach 2048.</p></div>
+        <div class="stats"><div class="stat"><b id="g2048-score">0</b><span>Score</span></div><div class="stat"><b id="g2048-best">0</b><span>Best</span></div></div>
+      </div>
+      <div class="board"><div id="g2048-grid"></div><div class="overlay" id="g2048-ov" hidden></div></div>
+      <div class="row"><button class="btn" id="g2048-new">New game</button></div>
+    </section>
+
+    <!-- MEMORY -->
+    <section class="game" id="mem" role="tabpanel" hidden>
+      <div class="ghead">
+        <div><h2>Memory</h2><p>Flip two cards at a time. Find all eight pairs in as few moves as you can.</p></div>
+        <div class="stats"><div class="stat"><b id="mem-moves">0</b><span>Moves</span></div><div class="stat"><b id="mem-time">0s</b><span>Time</span></div><div class="stat"><b id="mem-best">–</b><span>Best</span></div></div>
+      </div>
+      <div class="board"><div id="mem-grid"></div><div class="overlay" id="mem-ov" hidden></div></div>
+      <div class="row"><button class="btn" id="mem-new">Shuffle</button></div>
+    </section>
+
+    <!-- WHACK -->
+    <section class="game" id="whack" role="tabpanel" hidden>
+      <div class="ghead">
+        <div><h2>Whack</h2><p>Tap moles as they pop up. Brown is 1 point, gold is 3. They get faster as time runs out.</p></div>
+        <div class="stats"><div class="stat"><b id="whack-score">0</b><span>Score</span></div><div class="stat"><b id="whack-time">30</b><span>Seconds</span></div><div class="stat"><b id="whack-best">0</b><span>Best</span></div></div>
+      </div>
+      <div class="timebar"><div id="whack-bar"></div></div>
+      <div class="board"><div id="whack-grid"></div><div class="overlay" id="whack-ov"></div></div>
+      <div class="row"><button class="btn" id="whack-go">Start</button></div>
+    </section>
+
+    <!-- TIC TAC TOE -->
+    <section class="game" id="ttt" role="tabpanel" hidden>
+      <div class="ghead">
+        <div><h2>Tic-Tac-Toe</h2><p>You are X. Get three in a row. You and the computer take turns going first.</p></div>
+        <div class="stats"><div class="stat"><b id="ttt-w">0</b><span>Wins</span></div><div class="stat"><b id="ttt-d">0</b><span>Draws</span></div><div class="stat"><b id="ttt-l">0</b><span>Losses</span></div></div>
+      </div>
+      <div class="seg" role="group" aria-label="Difficulty"><button id="ttt-easy" aria-pressed="true">Easy</button><button id="ttt-hard" aria-pressed="false">Hard</button></div>
+      <div class="board" style="max-width:340px"><div id="ttt-grid"></div></div>
+      <p class="status" id="ttt-status">Your move.</p>
+      <div class="row"><button class="btn" id="ttt-new">Next round</button><button class="btn ghost" id="ttt-reset">Reset tally</button></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const rand=n=>Math.floor(Math.random()*n);
+const store={
+  get(k,d){try{const v=localStorage.getItem('pa_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('pa_'+k,JSON.stringify(v))}catch(e){}}
+};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function swipe(el,fn){
+  let x0,y0;
+  el.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY},{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(x0==null)return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;
+    fn(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'));
+  });
+  el.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+}
+const KEYDIR={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
+
+/* ---------- SNAKE ---------- */
+const Snake=(()=>{
+  const N=18,cv=$('#snake-cv'),ctx=cv.getContext('2d'),ov=$('#snake-ov'),go=$('#snake-go');
+  const DIRS={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+  let s,dir,queue,food,score,step,state,acc=0,last=0,best=store.get('snake',0);
+  let C={};
+  function colors(){C={board:css('--ink'),check:css('--panel'),snake:css('--mint'),head:css('--sun'),food:css('--coral'),leaf:css('--mint'),eye:css('--ink')}}
+  function msg(t,x){ov.hidden=false;ov.innerHTML=`<strong>${t}</strong><span>${x}</span>`}
+  function ui(){
+    $('#snake-score').textContent=score;$('#snake-best').textContent=best;
+    go.textContent={ready:'Start',running:'Pause',paused:'Resume',over:'Play again'}[state];
+  }
+  function placeFood(){do{food={x:rand(N),y:rand(N)}}while(s.some(p=>p.x===food.x&&p.y===food.y))}
+  function reset(){
+    s=[{x:6,y:9},{x:5,y:9},{x:4,y:9}];dir=DIRS.right;queue=[];score=0;step=140;state='ready';
+    placeFood();ui();msg('Snake','Press Start, an arrow key, or swipe to begin.');draw();
+  }
+  function start(){state='running';ov.hidden=true;last=performance.now();acc=0;ui();requestAnimationFrame(loop)}
+  function pause(){if(state!=='running')return;state='paused';ui();msg('Paused','Press Space or Resume to keep going.')}
+  function action(){
+    if(state==='running')pause();else if(state==='over'){reset();start()}else start();
+  }
+  function turn(d){
+    if(state==='over')reset();
+    if(state!=='running')start();
+    const D=DIRS[d],ref=queue.length?queue[queue.length-1]:dir;
+    if((D.x===-ref.x&&D.y===-ref.y)||(D.x===ref.x&&D.y===ref.y))return;
+    if(queue.length<3)queue.push(D);
+  }
+  function loop(t){
+    if(state!=='running')return;
+    acc+=t-last;last=t;
+    while(acc>=step){acc-=step;tick();if(state!=='running')break}
+    draw();
+    if(state==='running')requestAnimationFrame(loop);
+  }
+  function tick(){
+    if(queue.length)dir=queue.shift();
+    const h={x:s[0].x+dir.x,y:s[0].y+dir.y};
+    if(h.x<0||h.y<0||h.x>=N||h.y>=N||s.some((p,i)=>i<s.length-1&&p.x===h.x&&p.y===h.y)){
+      state='over';ui();draw();
+      msg('Game over',`You ate ${score} ${score===1?'apple':'apples'}. Press Play again or any arrow key.`);return;
+    }
+    s.unshift(h);
+    if(h.x===food.x&&h.y===food.y){
+      score++;step=Math.max(65,140-score*3);
+      if(score>best){best=score;store.set('snake',best)}
+      placeFood();ui();
+    }else s.pop();
+  }
+  function rr(x,y,w,h,r){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else ctx.rect(x,y,w,h);ctx.fill()}
+  function draw(){
+    const W=cv.width;if(!W)return;const c=W/N;
+    ctx.fillStyle=C.board;ctx.fillRect(0,0,W,W);
+    ctx.fillStyle=C.check;ctx.globalAlpha=.45;
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++)if((x+y)%2)ctx.fillRect(x*c,y*c,c,c);
+    ctx.globalAlpha=1;
+    // apple
+    ctx.fillStyle=C.food;ctx.beginPath();ctx.arc(food.x*c+c/2,food.y*c+c*.55,c*.38,0,7);ctx.fill();
+    ctx.fillStyle=C.leaf;ctx.beginPath();ctx.ellipse(food.x*c+c*.62,food.y*c+c*.16,c*.14,c*.07,-.6,0,7);ctx.fill();
+    // snake
+    s.forEach((p,i)=>{ctx.fillStyle=i?C.snake:C.head;const g=i?c*.1:c*.04;rr(p.x*c+g,p.y*c+g,c-2*g,c-2*g,c*.3)});
+    const h=s[0],ex=dir.y?c*.2:0,ey=dir.x?c*.2:0;
+    ctx.fillStyle=C.eye;
+    [[1],[-1]].forEach(([k])=>{ctx.beginPath();ctx.arc(h.x*c+c/2+dir.x*c*.18+ex*k,h.y*c+c/2+dir.y*c*.18+ey*k,c*.08,0,7);ctx.fill()});
+  }
+  function resize(){
+    const r=cv.getBoundingClientRect();if(!r.width)return;
+    const w=Math.round(r.width*(window.devicePixelRatio||1));
+    if(cv.width!==w){cv.width=cv.height=w}draw();
+  }
+  go.onclick=action;
+  document.querySelectorAll('.dpad button').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();turn(b.dataset.d)}));
+  swipe(cv,turn);ov.addEventListener('click',()=>{if(state!=='running')action()});
+  colors();reset();
+  return{
+    key(e){
+      if(KEYDIR[e.key]){e.preventDefault();turn(KEYDIR[e.key])}
+      else if(e.key===' '){e.preventDefault();action()}
+      else if(e.key==='Enter'&&state==='over'){action()}
+    },
+    resize,leave:pause
+  };
+})();
+
+/* ---------- 2048 ---------- */
+const G2048=(()=>{
+  const grid=$('#g2048-grid'),ov=$('#g2048-ov');
+  let g,score,won,over,best=store.get('2048',0);
+  for(let i=0;i<16;i++)grid.appendChild(document.createElement('div'));
+  const cells=[...grid.children];
+  function empties(){const e=[];for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(!g[r][c])e.push([r,c]);return e}
+  function add(){const e=empties();if(!e.length)return -1;const[r,c]=e[rand(e.length)];g[r][c]=Math.random()<.9?2:4;return r*4+c}
+  function canMove(){
+    if(empties().length)return true;
+    for(let r=0;r<4;r++)for(let c=0;c<4;c++){if(c<3&&g[r][c]===g[r][c+1])return true;if(r<3&&g[r][c]===g[r+1][c])return true}
+    return false;
+  }
+  function render(nw=-1,merged=new Set()){
+    g.flat().forEach((v,i)=>{
+      const el=cells[i],d=String(v).length;
+      el.className='cell'+(v?` t${Math.min(v,4096)}`:'')+(d===3?' d3':d>=4?' d4':'')+(i===nw?' new':'')+(merged.has(i)?' merge':'');
+      el.textContent=v||'';
+    });
+    $('#g2048-score').textContent=score;$('#g2048-best').textContent=best;
+  }
+  function show(t,x,keep){
+    ov.hidden=false;
+    ov.innerHTML=`<strong>${t}</strong><span>${x}</span><div class="row">${keep?'<button class="btn" data-a="keep">Keep going</button>':''}<button class="btn${keep?' ghost':''}" data-a="new">New game</button></div>`;
+  }
+  ov.addEventListener('click',e=>{const a=e.target.dataset.a;if(a==='keep')ov.hidden=true;if(a==='new')reset()});
+  function reset(){g=Array.from({length:4},()=>[0,0,0,0]);score=0;won=false;over=false;ov.hidden=true;add();add();render()}
+  function move(d){
+    if(over||!ov.hidden)return;
+    let moved=false,gained=0;const merged=new Set();
+    for(let i=0;i<4;i++){
+      const pos=[];
+      for(let j=0;j<4;j++)pos.push(d==='left'?[i,j]:d==='right'?[i,3-j]:d==='up'?[j,i]:[3-j,i]);
+      const vals=pos.map(([r,c])=>g[r][c]).filter(Boolean),out=[];
+      for(let k=0;k<vals.length;k++){
+        if(vals[k]===vals[k+1]){out.push(vals[k]*2);gained+=vals[k]*2;const[r,c]=pos[out.length-1];merged.add(r*4+c);k++}
+        else out.push(vals[k]);
+      }
+      while(out.length<4)out.push(0);
+      pos.forEach(([r,c],k)=>{if(g[r][c]!==out[k])moved=true;g[r][c]=out[k]});
+    }
+    if(!moved)return;
+    score+=gained;if(score>best){best=score;store.set('2048',best)}
+    render(add(),merged);
+    if(!won&&g.flat().some(v=>v>=2048)){won=true;show('You made 2048!','Nice work. Keep going for a bigger tile or start fresh.',true)}
+    else if(!canMove()){over=true;show('No moves left',`Final score: ${score}.`)}
+  }
+  $('#g2048-new').onclick=reset;swipe(grid,move);reset();
+  return{key(e){if(KEYDIR[e.key]){e.preventDefault();move(KEYDIR[e.key])}}};
+})();
+
+/* ---------- MEMORY ---------- */
+const Memory=(()=>{
+  const grid=$('#mem-grid'),ov=$('#mem-ov'),FRUIT=['🍉','🍋','🍇','🍒','🥝','🍑','🍍','🥥'];
+  let open=[],lock=false,moves=0,found=0,t0=0,timer=null,best=store.get('mem',null);
+  function stats(){
+    $('#mem-moves').textContent=moves;
+    $('#mem-time').textContent=(t0?Math.floor((Date.now()-t0)/1000):0)+'s';
+    $('#mem-best').textContent=best==null?'–':best;
+  }
+  function reset(){
+    clearInterval(timer);timer=null;open=[];lock=false;moves=0;found=0;t0=0;ov.hidden=true;
+    const deck=[...FRUIT,...FRUIT];
+    for(let i=deck.length-1;i>0;i--){const j=rand(i+1);[deck[i],deck[j]]=[deck[j],deck[i]]}
+    grid.innerHTML=deck.map((f,i)=>`<button class="card" data-f="${f}" aria-label="Card ${i+1}"><span class="in"><span class="b"></span><span class="f">${f}</span></span></button>`).join('');
+    stats();
+  }
+  grid.addEventListener('click',e=>{
+    const card=e.target.closest('.card');
+    if(!card||lock||card.classList.contains('open')||card.classList.contains('done'))return;
+    if(!t0){t0=Date.now();timer=setInterval(stats,500)}
+    card.classList.add('open');open.push(card);
+    if(open.length<2)return;
+    moves++;stats();
+    const[a,b]=open;open=[];
+    if(a.dataset.f===b.dataset.f){
+      setTimeout(()=>{a.classList.add('done');b.classList.add('done')},300);
+      if(++found===FRUIT.length){
+        clearInterval(timer);stats();
+        const secs=Math.floor((Date.now()-t0)/1000),rec=best==null||moves<best;
+        if(rec){best=moves;store.set('mem',best)}
+        setTimeout(()=>{ov.hidden=false;ov.innerHTML=`<strong>All pairs found</strong><span>${moves} moves in ${secs} seconds.${rec?' New best!':''}</span><button class="btn" data-a="new">Play again</button>`;stats()},700);
+      }
+    }else{
+      lock=true;
+      setTimeout(()=>{a.classList.remove('open');b.classList.remove('open');lock=false},750);
+    }
+  });
+  ov.addEventListener('click',e=>{if(e.target.dataset.a==='new')reset()});
+  $('#mem-new').onclick=reset;reset();
+  return{};
+})();
+
+/* ---------- WHACK ---------- */
+const Whack=(()=>{
+  const grid=$('#whack-grid'),ov=$('#whack-ov'),go=$('#whack-go'),bar=$('#whack-bar'),LEN=30000;
+  grid.innerHTML=Array.from({length:9},(_,i)=>`<button class="hole" aria-label="Hole ${i+1}"><span class="mole"><i></i></span></button>`).join('');
+  const holes=[...grid.children].map(el=>({el,up:false,gold:false,token:0}));
+  let running=false,left=LEN,score=0,end0=0,tickT=null,spawnT=null,best=store.get('whack',0);
+  function stats(){
+    $('#whack-score').textContent=score;$('#whack-best').textContent=best;
+    $('#whack-time').textContent=Math.ceil(left/1000);bar.style.width=(left/LEN*100)+'%';
+  }
+  function hide(h){h.up=false;h.token++;h.el.classList.remove('up','gold')}
+  function spawn(){
+    if(!running)return;
+    const p=1-left/LEN,free=holes.filter(h=>!h.up);
+    if(free.length){
+      const h=free[rand(free.length)];h.up=true;h.gold=Math.random()<.12;h.el.classList.remove('bonk');
+      h.el.classList.add('up');if(h.gold)h.el.classList.add('gold');
+      const tk=++h.token;setTimeout(()=>{if(h.token===tk)hide(h)},950-450*p);
+    }
+    spawnT=setTimeout(spawn,720-380*p+rand(220));
+  }
+  function start(){
+    running=true;score=0;left=LEN;end0=Date.now()+LEN;ov.hidden=true;go.textContent='Restart';
+    holes.forEach(hide);stats();
+    tickT=setInterval(()=>{left=Math.max(0,end0-Date.now());stats();if(!left)finish()},100);
+    spawnT=setTimeout(spawn,300);
+  }
+  function stop(){running=false;clearInterval(tickT);clearTimeout(spawnT);holes.forEach(hide)}
+  function finish(){
+    stop();const rec=score>best;if(rec){best=score;store.set('whack',best)}
+    stats();go.textContent='Play again';
+    ov.hidden=false;ov.innerHTML=`<strong>Time!</strong><span>You scored ${score}.${rec?' New best!':''}</span>`;
+  }
+  holes.forEach(h=>h.el.addEventListener('pointerdown',e=>{
+    e.preventDefault();if(!running||!h.up)return;
+    const pts=h.gold?3:1;score+=pts;stats();
+    h.token++;h.up=false;h.el.classList.add('bonk');
+    const tag=document.createElement('span');tag.className='plus';tag.textContent='+'+pts;h.el.appendChild(tag);
+    setTimeout(()=>{tag.remove();h.el.classList.remove('up','gold','bonk')},380);
+  }));
+  go.onclick=()=>{stop();start()};
+  ov.addEventListener('click',()=>{if(!running)start()});
+  ov.innerHTML='<strong>Ready?</strong><span>Press Start. You have 30 seconds.</span>';stats();
+  return{leave(){if(running){stop();go.textContent='Start';left=LEN;stats();ov.hidden=false;ov.innerHTML='<strong>Ready?</strong><span>Press Start. You have 30 seconds.</span>'}}};
+})();
+
+/* ---------- TIC-TAC-TOE ---------- */
+const TTT=(()=>{
+  const grid=$('#ttt-grid'),st=$('#ttt-status'),L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  grid.innerHTML=Array.from({length:9},(_,i)=>`<button class="sq" aria-label="Square ${i+1}"></button>`).join('');
+  const sq=[...grid.children];
+  let b,busy,done,round=0,hard=store.get('ttt_hard',false),tally=store.get('ttt',{w:0,d:0,l:0});
+  function winner(x){
+    for(const l of L)if(x[l[0]]&&x[l[0]]===x[l[1]]&&x[l[1]]===x[l[2]])return{who:x[l[0]],line:l};
+    return x.every(Boolean)?{who:'draw'}:null;
+  }
+  function mm(x,turn,depth){
+    const w=winner(x);if(w)return w.who==='O'?10-depth:w.who==='X'?depth-10:0;
+    let best=turn==='O'?-99:99;
+    for(let i=0;i<9;i++)if(!x[i]){x[i]=turn;const v=mm(x,turn==='O'?'X':'O',depth+1);x[i]='';best=turn==='O'?Math.max(best,v):Math.min(best,v)}
+    return best;
+  }
+  function aiMove(){
+    const free=b.map((v,i)=>v?null:i).filter(i=>i!==null);
+    if(!hard&&Math.random()<.55)return free[rand(free.length)];
+    let top=-99,picks=[];
+    for(const i of free){b[i]='O';const v=mm(b,'X',1);b[i]='';if(v>top){top=v;picks=[i]}else if(v===top)picks.push(i)}
+    return picks[rand(picks.length)];
+  }
+  function paint(){
+    b.forEach((v,i)=>{sq[i].textContent=v;sq[i].className='sq '+v});
+    $('#ttt-w').textContent=tally.w;$('#ttt-d').textContent=tally.d;$('#ttt-l').textContent=tally.l;
+  }
+  function check(){
+    const w=winner(b);if(!w)return false;
+    done=true;
+    if(w.line)w.line.forEach(i=>sq[i].classList.add('win'));
+    if(w.who==='X'){tally.w++;st.textContent='You win!'}
+    else if(w.who==='O'){tally.l++;st.textContent='The computer wins this one.'}
+    else{tally.d++;st.textContent='Draw.'}
+    store.set('ttt',tally);
+    $('#ttt-w').textContent=tally.w;$('#ttt-d').textContent=tally.d;$('#ttt-l').textContent=tally.l;
+    return true;
+  }
+  function cpu(){
+    busy=true;st.textContent='Computer is thinking…';
+    setTimeout(()=>{b[aiMove()]='O';paint();busy=false;if(!check())st.textContent='Your move.'},380);
+  }
+  function newRound(){
+    b=Array(9).fill('');done=false;busy=false;round++;paint();
+    if(round%2===0)cpu();else st.textContent='Your move.';
+  }
+  sq.forEach((el,i)=>el.onclick=()=>{
+    if(busy||done||b[i])return;b[i]='X';paint();if(!check())cpu();
+  });
+  function setMode(h){hard=h;store.set('ttt_hard',h);$('#ttt-easy').setAttribute('aria-pressed',!h);$('#ttt-hard').setAttribute('aria-pressed',h)}
+  $('#ttt-easy').onclick=()=>setMode(false);$('#ttt-hard').onclick=()=>setMode(true);
+  $('#ttt-new').onclick=newRound;
+  $('#ttt-reset').onclick=()=>{tally={w:0,d:0,l:0};store.set('ttt',tally);paint()};
+  setMode(hard);newRound();
+  return{};
+})();
+
+/* ---------- PICKER ---------- */
+const GAMES={snake:Snake,g2048:G2048,mem:Memory,whack:Whack,ttt:TTT};
+let active=null;
+function show(id){
+  if(!GAMES[id])id='snake';
+  if(active&&active!==id&&GAMES[active].leave)GAMES[active].leave();
+  active=id;store.set('tab',id);
+  document.querySelectorAll('.pick').forEach(p=>p.setAttribute('aria-selected',p.dataset.g===id));
+  document.querySelectorAll('.game').forEach(s=>s.hidden=s.id!==id);
+  if(id==='snake')Snake.resize();
+}
+document.querySelectorAll('.pick').forEach(p=>p.onclick=()=>show(p.dataset.g));
+document.addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  const g=GAMES[active];if(g&&g.key)g.key(e);
+});
+addEventListener('resize',()=>{if(active==='snake')Snake.resize()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&active==='snake')Snake.leave()});
+show((location.hash||'').slice(1)||store.get('tab','snake'));
+if(document.fonts)document.fonts.ready.then(()=>{if(active==='snake')Snake.resize()});
+</script>
+</body>
+</html>

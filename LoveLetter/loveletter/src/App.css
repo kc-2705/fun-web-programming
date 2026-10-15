@@ -1,0 +1,39 @@
+.welcome-screen {
+  position: relative;
+  background-color: #ffd6d6;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.floating-text {
+  font-family: "Brush Script MT", cursive;
+  font-size: 2rem;
+  color: #b3003b;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+/* floating hearts */
+.hearts-bg::before, .hearts-bg::after {
+  content: "❤️❤️❤️❤️❤️";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2rem;
+  animation: hearts 6s linear infinite;
+}
+
+@keyframes hearts {
+  0% { transform: translate(-50%, 100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(-50%, -100vh); opacity: 0; }
+}

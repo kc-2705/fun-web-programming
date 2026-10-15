@@ -1,0 +1,10 @@
+node_modules
+build
+dist
+.DS_Store
+*.log
+
+# Kept locally only
+FlowerGarden/original/
+FlowerGarden/roja.mp3
+BirthdayGreeting/

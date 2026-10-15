@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Interactive Garden</title>
+  <meta name="description" content="Plant flowers with a click, water them, make it rain and watch the day turn to night." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="mode-auto">
+  <!-- Sky layers, back to front -->
+  <div id="sky" aria-hidden="true">
+    <div id="stars"></div>
+    <div id="sun" class="orb"></div>
+    <div id="moon" class="orb"></div>
+    <div id="clouds"></div>
+  </div>
+
+  <!-- Where clicks plant flowers -->
+  <svg id="garden" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Your garden"></svg>
+  <div id="ground" aria-hidden="true"></div>
+  <svg id="critters" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+  <canvas id="rain" aria-hidden="true"></canvas>
+
+  <header class="hud">
+    <div class="counter" aria-live="polite"><span id="count">0</span> <span id="count-label">flowers</span></div>
+    <button class="clock" id="clock" aria-haspopup="menu" aria-expanded="false" title="Change the time of day (T)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+      <span id="clock-label">Day</span>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+    </button>
+  </header>
+
+  <nav class="toolbar" aria-label="Garden tools">
+    <div class="tool-group" id="flower-picker" role="radiogroup" aria-label="Flower to plant"></div>
+    <span class="divider"></span>
+    <button class="tool" id="tool-water" aria-pressed="false" title="Watering can (W): click a flower to help it grow">
+      <svg viewBox="0 0 24 24"><path d="M4 9h11l3-3M15 9v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9M18 6l2 2M7 9V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v3"/></svg>
+      <span>Water</span>
+    </button>
+    <button class="tool" id="tool-rain" title="Make it rain (R): every flower grows">
+      <svg viewBox="0 0 24 24"><path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8a3.5 3.5 0 0 1 .5 7H7zM8 18l-1 2M12 18l-1 2M16 18l-1 2"/></svg>
+      <span>Rain</span>
+    </button>
+    <button class="tool" id="tool-time" aria-haspopup="menu" aria-expanded="false" title="Time of day (T)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+      <span id="time-label">Auto</span>
+    </button>
+    <span class="divider"></span>
+    <button class="tool icon-only" id="tool-sound" aria-pressed="false" title="Sound (M)">
+      <svg viewBox="0 0 24 24"><path d="M5 9h3l4-4v14l-4-4H5zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+      <span class="sr-only">Sound</span>
+    </button>
+    <button class="tool icon-only" id="tool-undo" title="Undo (Ctrl+Z)">
+      <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+      <span class="sr-only">Undo</span>
+    </button>
+    <button class="tool icon-only" id="tool-photo" title="Save a picture (S)">
+      <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      <span class="sr-only">Save a picture</span>
+    </button>
+    <button class="tool icon-only" id="tool-share" title="Copy a link to this garden">
+      <svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <span class="sr-only">Share</span>
+    </button>
+    <button class="tool icon-only" id="tool-clear" title="Clear the garden">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+      <span class="sr-only">Clear the garden</span>
+    </button>
+    <button class="tool icon-only" id="tool-help" title="How to play (?)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17.5v.01"/></svg>
+      <span class="sr-only">How to play</span>
+    </button>
+  </nav>
+
+  <!-- Instructions, shown when the garden opens -->
+  <div class="overlay" id="help" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="card">
+      <p class="eyebrow">Welcome to</p>
+      <h1 id="help-title">Interactive Garden</h1>
+      <p class="lead">Plant a garden with your mouse or finger, then watch it live through the day and night.</p>
+      <ol class="steps">
+        <li><span class="step-icon">1</span><div><b>Click or tap anywhere</b> to plant. The higher you click, the taller the flower grows.</div></li>
+        <li><span class="step-icon">2</span><div><b>Pick a flower</b> at the bottom: daisy, tulip, sunflower, rose, lavender, or a surprise mix.</div></li>
+        <li><span class="step-icon">3</span><div><b>Water</b> a flower to help it grow, or <b>make it rain</b> on the whole garden.</div></li>
+        <li><span class="step-icon">4</span><div><b>Watch the sky:</b> the sun sets, stars and fireflies come out, and butterflies and bees visit by day.</div></li>
+        <li><span class="step-icon">5</span><div><b>Keep it:</b> your garden saves itself. Save a picture or copy a link to share it.</div></li>
+      </ol>
+      <details class="keys">
+        <summary>Keyboard shortcuts</summary>
+        <dl>
+          <dt>1 – 6</dt><dd>Choose a flower</dd>
+          <dt>W</dt><dd>Watering can</dd>
+          <dt>R</dt><dd>Rain</dd>
+          <dt>T</dt><dd>Time of day</dd>
+          <dt>M</dt><dd>Sound on or off</dd>
+          <dt>S</dt><dd>Save a picture</dd>
+          <dt>Ctrl + Z</dt><dd>Undo</dd>
+          <dt>?</dt><dd>Show this help</dd>
+        </dl>
+      </details>
+      <label class="dont-show"><input type="checkbox" id="help-hide" /> Don’t show this when I open the garden</label>
+      <button class="primary" id="help-start">Start planting</button>
+    </div>
+  </div>
+
+  <!-- Inline confirm for clearing, so nothing is lost by accident -->
+  <div class="overlay" id="confirm-clear" role="dialog" aria-modal="true" aria-labelledby="clear-title" hidden>
+    <div class="card small">
+      <h2 id="clear-title">Clear the garden?</h2>
+      <p>This removes every flower. You can undo it right after.</p>
+      <div class="row">
+        <button id="clear-cancel">Keep my garden</button>
+        <button class="danger" id="clear-yes">Clear it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time of day menu, opened from the clock or the Time button -->
+  <div id="time-menu" class="time-menu" role="menu" aria-label="Time of day" hidden>
+    <button role="menuitemradio" data-mode="auto"><span class="swatch auto"></span><span><b>Auto</b><small>Day and night pass on their own</small></span></button>
+    <button role="menuitemradio" data-mode="sunrise"><span class="swatch sunrise"></span><span><b>Sunrise</b><small>Soft peach morning</small></span></button>
+    <button role="menuitemradio" data-mode="day"><span class="swatch day"></span><span><b>Day</b><small>Blue sky, butterflies and bees</small></span></button>
+    <button role="menuitemradio" data-mode="sunset"><span class="swatch sunset"></span><span><b>Sunset</b><small>Golden evening light</small></span></button>
+    <button role="menuitemradio" data-mode="night"><span class="swatch night"></span><span><b>Night</b><small>Stars, moon and fireflies</small></span></button>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

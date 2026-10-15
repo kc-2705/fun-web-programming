@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Lamp Login</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <!-- Lamp -->
+  <div class="lamp-container" id="lamp" role="button" tabindex="0" aria-pressed="false" aria-label="Turn the lamp on">
+    <svg viewBox="0 0 200 400" class="lamp-svg">
+      <!-- Outer shade -->
+      <path class="lamp-shade-outer" d="M30,50 Q100,0 170,50 L150,150 L50,150 Z"/>
+      <!-- Inner shade -->
+      <path class="lamp-shade-inner" d="M50,50 Q100,20 150,50 L140,150 L60,150 Z"/>
+      
+      <!-- Light glow -->
+      <ellipse class="lamp-glow" cx="100" cy="50" rx="80" ry="40"/>
+
+      <!-- Lamp pole -->
+      <rect class="lamp-pole" x="95" y="150" width="10" height="150" rx="5"/>
+
+      <!-- Pull cord -->
+      <path class="cord" d="M135 150 L135 215"/>
+      <circle class="cord-knob" cx="135" cy="222" r="7"/>
+
+      <!-- Lamp base -->
+      <ellipse class="lamp-base" cx="100" cy="300" rx="30" ry="10"/>
+
+      <!-- Eyes -->
+      <circle class="eye left-eye" cx="80" cy="100" r="0"/>
+      <circle class="eye right-eye" cx="120" cy="100" r="0"/>
+      <path class="eye-lid left-lid" d="M75 100 Q80 105 85 100"/>
+      <path class="eye-lid right-lid" d="M115 100 Q120 105 125 100"/>
+
+      <!-- Mouth -->
+      <path class="mouth" d="M85 120 Q100 120 115 120"/>
+      <path class="tongue" d="M95 125 Q100 135 105 125"/>
+    </svg>
+    <p class="hint" id="hint">Pull the cord to turn on the light</p>
+  </div>
+
+  <!-- Login form -->
+  <form class="login-form" id="loginForm" aria-hidden="true">
+    <h2>Login</h2>
+    <input type="text" placeholder="Username" required>
+    <input type="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+    <p class="form-message" id="formMessage" role="status"></p>
+  </form>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

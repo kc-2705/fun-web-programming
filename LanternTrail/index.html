@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Lantern Trail</title>
+  <meta name="description" content="A 3D endless runner across a floating stone path: sunset valleys, lantern temples and frozen peaks." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --gold: #ffcf6b; --ink: #1a1230; --glass: rgba(20, 14, 40, 0.55); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #120c24; color: #fff; font-family: 'Nunito', system-ui, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+    canvas { display: block; }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+    .hud { position: fixed; inset: 0; pointer-events: none; padding: calc(14px + env(safe-area-inset-top, 0px)) 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .hud[hidden] { display: none; }
+    .stat { background: var(--glass); backdrop-filter: blur(8px); border-radius: 16px; padding: 8px 14px; min-width: 110px; }
+    .stat small { display: block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; font-weight: 800; }
+    .stat b { font-size: 26px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .left, .right { display: flex; gap: 8px; align-items: flex-start; }
+    .coins b { color: var(--gold); }
+    .icon-btn { pointer-events: auto; width: 46px; height: 46px; border-radius: 14px; border: 0; background: var(--glass); backdrop-filter: blur(8px); color: #fff; display: grid; place-items: center; }
+    .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .power { position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: rgba(80, 200, 255, 0.25); border: 1px solid rgba(140, 220, 255, 0.6); border-radius: 999px; padding: 6px 14px; font-weight: 800; font-size: 14px; pointer-events: none; }
+    .power[hidden] { display: none; }
+    .banner { position: fixed; left: 0; right: 0; top: 24%; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s, transform 0.6s; transform: translateY(10px); }
+    .banner.show { opacity: 1; transform: none; }
+    .banner small { display: block; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; font-size: 13px; opacity: 0.8; }
+    .banner strong { font-family: 'Cinzel', serif; font-size: clamp(30px, 6vw, 56px); text-shadow: 0 4px 30px rgba(0, 0, 0, 0.45); }
+
+    .screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: radial-gradient(ellipse at 50% 40%, rgba(18, 10, 40, 0.35), rgba(10, 6, 24, 0.82)); }
+    .screen[hidden] { display: none; }
+    .panel { width: min(520px, 100%); text-align: center; }
+    .eyebrow { margin: 0; font-weight: 800; letter-spacing: 0.32em; text-transform: uppercase; font-size: 12px; color: var(--gold); }
+    h1 { font-family: 'Cinzel', serif; font-weight: 800; font-size: clamp(42px, 9vw, 76px); line-height: 0.95; margin: 10px 0 12px; letter-spacing: 0.02em; text-shadow: 0 6px 40px rgba(255, 170, 80, 0.45); }
+    h2 { font-family: 'Cinzel', serif; font-size: 40px; margin: 6px 0 4px; }
+    .lead { margin: 0 auto 22px; max-width: 40ch; opacity: 0.85; line-height: 1.5; }
+    .controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 22px; }
+    .control { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 12px 8px; font-size: 13px; line-height: 1.35; }
+    .control b { display: block; font-size: 15px; margin-bottom: 4px; }
+    kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.16); font: 700 12px 'Nunito', sans-serif; }
+    .play { border: 0; border-radius: 18px; padding: 16px 40px; font-size: 20px; font-weight: 800; color: var(--ink); background: linear-gradient(#ffe29a, #ffb648); box-shadow: 0 10px 30px rgba(255, 170, 60, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.15); }
+    .play:active { transform: translateY(2px); }
+    .meta { margin-top: 16px; display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; font-size: 14px; opacity: 0.85; }
+    .meta label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+    .results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0 22px; }
+    .results div { background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 12px 6px; }
+    .results small { display: block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; font-weight: 800; }
+    .results b { font-size: 26px; font-variant-numeric: tabular-nums; }
+    .new-best { color: var(--gold); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .loading { position: fixed; inset: 0; display: grid; place-items: center; background: #120c24; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; font-size: 13px; }
+    .loading[hidden] { display: none; }
+    @media (max-width: 560px) {
+      .controls { grid-template-columns: 1fr; }
+      .stat { min-width: 84px; padding: 6px 10px; }
+      .stat b { font-size: 21px; }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="loading" id="loading">Lighting the lanterns…</div>
+
+  <div class="hud" id="hud" hidden>
+    <div class="left">
+      <div class="stat"><small>Distance</small><b id="dist">0</b><small style="display:inline;margin-left:2px">m</small></div>
+      <div class="stat coins"><small>Coins</small><b id="coins">0</b></div>
+    </div>
+    <div class="right">
+      <div class="stat"><small>Best</small><b id="best-hud">0</b></div>
+      <button class="icon-btn" id="sound-btn" aria-label="Sound on" title="Sound (M)">
+        <svg viewBox="0 0 24 24"><path d="M5 9h3l4-4v14l-4-4H5zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+      </button>
+      <button class="icon-btn" id="pause-btn" aria-label="Pause" title="Pause (P)">
+        <svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="power" id="power" hidden>Coin magnet</div>
+  <div class="banner" id="banner"><small id="banner-small">Now entering</small><strong id="banner-title">Sunset Valley</strong></div>
+
+  <div class="screen" id="start">
+    <div class="panel">
+      <p class="eyebrow">A sky-high endless run</p>
+      <h1>Lantern<br />Trail</h1>
+      <p class="lead">Race along a stone path floating above the clouds. Dodge, jump and slide through Sunset Valley, the Lantern Temple and the Frost Peaks.</p>
+      <div class="controls">
+        <div class="control"><b>Change lanes</b><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd><br />Swipe left or right</div>
+        <div class="control"><b>Jump</b><kbd>↑</kbd> <kbd>W</kbd> or <kbd>Space</kbd><br />Swipe up</div>
+        <div class="control"><b>Slide</b><kbd>↓</kbd> or <kbd>S</kbd><br />Swipe down</div>
+      </div>
+      <button class="play" id="play-btn">Start running</button>
+      <div class="meta">
+        <span>Best: <b id="best-start">0</b></span>
+        <label><input type="checkbox" id="hq" checked /> High graphics</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="paused" hidden>
+    <div class="panel">
+      <h2>Paused</h2>
+      <p class="lead">Take a breath. The trail will wait.</p>
+      <button class="play" id="resume-btn">Keep running</button>
+    </div>
+  </div>
+
+  <div class="screen" id="over" hidden>
+    <div class="panel">
+      <p class="eyebrow" id="over-reason">You hit a wall</p>
+      <h2>Run over</h2>
+      <p class="new-best" id="new-best" hidden>New best score!</p>
+      <div class="results">
+        <div><small>Distance</small><b id="r-dist">0</b></div>
+        <div><small>Coins</small><b id="r-coins">0</b></div>
+        <div><small>Score</small><b id="r-score">0</b></div>
+      </div>
+      <button class="play" id="again-btn">Run again</button>
+      <div class="meta"><span>Best: <b id="best-over">0</b></span><span>Score = distance + 10 × coins</span></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+    // ================================================================
+    // Settings
+    // ================================================================
+    const LANE_X = [-2.3, 0, 2.3];
+    const TILE_LEN = 10;
+    const TILE_COUNT = 18;
+    const SPAWN_Z = -150;
+    const START_SPEED = 15;
+    const MAX_SPEED = 36;
+    const GRAVITY = -42;
+    const JUMP_V = 14;
+    const SLIDE_TIME = 0.75;
+    const BIOME_LENGTH = 700; // meters per scene
+    const isTouch = matchMedia('(pointer: coarse)').matches;
+
+    const $ = (id) => document.getElementById(id);
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const store = {
+      get: (k, d) => { try { const v = localStorage.getItem('lantern.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+      set: (k, v) => { try { localStorage.setItem('lantern.' + k, JSON.stringify(v)); } catch { /* not critical */ } },
+    };
+
+    // Three scenes. Colors blend smoothly when the runner crosses into the next one.
+    const BIOMES = [
+      { name: 'Sunset Valley', top: '#27315f', horizon: '#ff9654', bottom: '#f7c08a', fog: '#f0a77a', sun: '#ffd28a',
+        path: '#c49a72', trim: '#8a5d3b', leaf: '#5a8f3a', trunk: '#5e3b22', glow: '#ffb35c', glowPower: 1.2, light: 1.0, ambient: 0.75, cloud: '#f6c9a6' },
+      { name: 'Lantern Temple', top: '#05081e', horizon: '#2f2463', bottom: '#3a2a5e', fog: '#1d1640', sun: '#c9d4ff',
+        path: '#6f6386', trim: '#3c3254', leaf: '#2d5f5a', trunk: '#3a2a3a', glow: '#ff7a3c', glowPower: 3.2, light: 0.35, ambient: 0.4, cloud: '#3c3170' },
+      { name: 'Frost Peaks', top: '#3e74c9', horizon: '#cfe7ff', bottom: '#eef6ff', fog: '#d6e9fb', sun: '#ffffff',
+        path: '#aebfd4', trim: '#7d93ad', leaf: '#e8f2ff', trunk: '#6b7a8f', glow: '#7fd8ff', glowPower: 1.4, light: 1.15, ambient: 0.85, cloud: '#ffffff' },
+    ];
+
+    // ================================================================
+    // Renderer, camera, post-processing
+    // ================================================================
+    let highQuality = store.get('hq', !isTouch);
+    $('hq').checked = highQuality;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.prepend(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog('#f0a77a', 30, 150);
+    const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 900);
+    camera.position.set(0, 4.4, 8.2);
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.6, 0.82);
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+
+    function applyQuality() {
+      renderer.setPixelRatio(Math.min(devicePixelRatio, highQuality ? 2 : 1));
+      renderer.shadowMap.enabled = highQuality;
+      composer.setPixelRatio(renderer.getPixelRatio());
+      composer.setSize(innerWidth, innerHeight);
+      scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
+    }
+
+    // ================================================================
+    // Lights and sky
+    // ================================================================
+    const hemi = new THREE.HemisphereLight('#ffe8d0', '#5b4a6b', 0.75);
+    scene.add(hemi);
+    const sunLight = new THREE.DirectionalLight('#ffd9a8', 1.8);
+    sunLight.position.set(-8, 14, 6);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(1024, 1024);
+    Object.assign(sunLight.shadow.camera, { left: -9, right: 9, top: 14, bottom: -14, near: 1, far: 50 });
+    sunLight.shadow.bias = -0.0008;
+    scene.add(sunLight, sunLight.target);
+
+    const skyUniforms = {
+      top: { value: new THREE.Color() },
+      horizon: { value: new THREE.Color() },
+      bottom: { value: new THREE.Color() },
+      sunColor: { value: new THREE.Color() },
+      sunDir: { value: new THREE.Vector3(-0.25, 0.12, -1).normalize() },
+    };
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(600, 32, 16),
+      new THREE.ShaderMaterial({
+        uniforms: skyUniforms,
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+        fragmentShader: `
+          uniform vec3 top, horizon, bottom, sunColor, sunDir; varying vec3 vDir;
+          void main(){
+            float h = vDir.y;
+            vec3 c = h > 0.0 ? mix(horizon, top, pow(h, 0.55)) : mix(horizon, bottom, pow(-h, 0.4));
+            float s = max(dot(normalize(vDir), sunDir), 0.0);
+            c += sunColor * (pow(s, 600.0) * 2.5 + pow(s, 12.0) * 0.35);
+            gl_FragColor = vec4(c, 1.0);
+          }`,
+      }),
+    );
+    scene.add(sky);
+
+    // Stars, visible only in the night scene.
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = [];
+    for (let i = 0; i < 900; i++) {
+      const v = new THREE.Vector3(rnd(-1, 1), rnd(0.05, 1), rnd(-1, 0.3)).normalize().multiplyScalar(560);
+      starPos.push(v.x, v.y, v.z);
+    }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({ color: '#ffffff', size: 1.6, transparent: true, opacity: 0, fog: false, depthWrite: false });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    // ================================================================
+    // World: a sea of clouds below, distant mountains, floating islands
+    // ================================================================
+    const cloudMat = new THREE.MeshStandardMaterial({ color: '#f6c9a6', roughness: 1, transparent: true, opacity: 0.92 });
+    const cloudSea = new THREE.Group();
+    scene.add(cloudSea);
+    const puffGeo = new THREE.IcosahedronGeometry(1, 2);
+    const clouds = [];
+    for (let i = 0; i < 70; i++) {
+      const puff = new THREE.Mesh(puffGeo, cloudMat);
+      const s = rnd(6, 16);
+      puff.scale.set(s * 1.8, s * 0.55, s);
+      puff.position.set(rnd(-120, 120), rnd(-16, -10), rnd(-260, 30));
+      cloudSea.add(puff);
+      clouds.push(puff);
+    }
+
+    const mountainMat = new THREE.MeshStandardMaterial({ color: '#6a4d78', roughness: 1, flatShading: true, fog: false });
+    const snowCapMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, flatShading: true, fog: false });
+    for (let i = 0; i < 26; i++) {
+      const side = i % 2 ? 1 : -1;
+      const h = rnd(60, 150);
+      const r = rnd(35, 70);
+      const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 6 + Math.floor(rnd(0, 3))), mountainMat);
+      m.position.set(side * rnd(110, 260), h / 2 - 40, rnd(-480, -260));
+      m.rotation.y = rnd(0, Math.PI);
+      scene.add(m);
+      if (h > 110) {
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.28, h * 0.28, m.geometry.parameters.radialSegments), snowCapMat);
+        cap.position.copy(m.position).add(new THREE.Vector3(0, h * 0.36, 0));
+        cap.rotation.y = m.rotation.y;
+        scene.add(cap);
+      }
+    }
+
+    // Shared materials, so a new scene recolors the whole world at once.
+    const mats = {
+      path: new THREE.MeshStandardMaterial({ color: '#c49a72', roughness: 0.85, flatShading: true }),
+      trim: new THREE.MeshStandardMaterial({ color: '#8a5d3b', roughness: 0.9, flatShading: true }),
+      leaf: new THREE.MeshStandardMaterial({ color: '#5a8f3a', roughness: 0.8, flatShading: true }),
+      trunk: new THREE.MeshStandardMaterial({ color: '#5e3b22', roughness: 1, flatShading: true }),
+      glow: new THREE.MeshStandardMaterial({ color: '#2a1a10', emissive: '#ffb35c', emissiveIntensity: 1.2 }),
+      island: new THREE.MeshStandardMaterial({ color: '#8b6b55', roughness: 1, flatShading: true }),
+      stone: new THREE.MeshStandardMaterial({ color: '#7f7a86', roughness: 0.8, flatShading: true }),
+      wood: new THREE.MeshStandardMaterial({ color: '#8b5a34', roughness: 0.75, flatShading: true }),
+      warn: new THREE.MeshStandardMaterial({ color: '#2a1408', emissive: '#ff6a2a', emissiveIntensity: 1.6 }),
+      coin: new THREE.MeshStandardMaterial({ color: '#ffcc33', metalness: 1, roughness: 0.25, emissive: '#ff9900', emissiveIntensity: 0.35 }),
+      magnet: new THREE.MeshStandardMaterial({ color: '#58d0ff', emissive: '#2aa8ff', emissiveIntensity: 1.5, roughness: 0.3 }),
+    };
+
+    function makeTree() {
+      const t = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 1.6, 6), mats.trunk);
+      trunk.position.y = 0.8;
+      t.add(trunk);
+      [[1.4, 1.9, 2.0], [1.1, 1.6, 2.9], [0.75, 1.3, 3.7]].forEach(([r, h, y]) => {
+        const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mats.leaf);
+        c.position.y = y;
+        c.castShadow = true;
+        t.add(c);
+      });
+      return t;
+    }
+
+    function makeLanternPost() {
+      const g = new THREE.Group();
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.2, 0.35), mats.trim);
+      post.position.y = 1.6;
+      post.castShadow = true;
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.14, 0.14), mats.trim);
+      arm.position.set(0.35, 3.05, 0);
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.55, 0.42), mats.glow);
+      lamp.position.set(0.72, 2.65, 0);
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.3, 4), mats.trim);
+      cap.position.set(0.72, 3.05, 0);
+      cap.rotation.y = Math.PI / 4;
+      g.add(post, arm, lamp, cap);
+      return g;
+    }
+
+    // Path tiles, recycled from back to front as the runner moves.
+    const tiles = [];
+    const tileGeo = new THREE.BoxGeometry(7.6, 0.8, TILE_LEN);
+    const curbGeo = new THREE.BoxGeometry(0.5, 0.35, TILE_LEN);
+    const underGeo = new THREE.ConeGeometry(3.6, 5, 5, 1);
+    for (let i = 0; i < TILE_COUNT; i++) {
+      const g = new THREE.Group();
+      const slab = new THREE.Mesh(tileGeo, mats.path);
+      slab.position.y = -0.4;
+      slab.receiveShadow = true;
+      const lc = new THREE.Mesh(curbGeo, mats.trim);
+      lc.position.set(-3.95, 0.0, 0);
+      const rc = lc.clone();
+      rc.position.x = 3.95;
+      const under = new THREE.Mesh(underGeo, mats.island);
+      under.position.y = -3.3;
+      under.rotation.x = Math.PI;
+      under.scale.set(1, 1, 1.6);
+      g.add(slab, lc, rc, under);
+      // Lines between the lanes.
+      [-1.15, 1.15].forEach((x) => {
+        const line = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, TILE_LEN * 0.9), mats.trim);
+        line.position.set(x, 0.011, 0);
+        g.add(line);
+      });
+      g.userData.decor = [];
+      g.position.z = -i * TILE_LEN;
+      scene.add(g);
+      tiles.push(g);
+      decorateTile(g);
+    }
+
+    function decorateTile(g) {
+      g.userData.decor.forEach((d) => g.remove(d));
+      g.userData.decor = [];
+      for (const side of [-1, 1]) {
+        const roll = Math.random();
+        let d = null;
+        if (roll < 0.45) {
+          d = makeLanternPost();
+          d.scale.x = side;
+          d.position.set(side * 4.2, 0, rnd(-3, 3));
+        } else if (roll < 0.8) {
+          d = makeTree();
+          d.position.set(side * rnd(5.2, 6.4), -0.2, rnd(-3, 3));
+          d.scale.setScalar(rnd(0.8, 1.25));
+          // A little floating ledge for the tree to stand on.
+          const ledge = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 0.4, 1.2, 6), mats.island);
+          ledge.position.y = -0.4;
+          d.add(ledge);
+        }
+        if (d) {
+          g.add(d);
+          g.userData.decor.push(d);
+        }
+      }
+    }
+
+    // Floating islands in the distance.
+    const islands = [];
+    for (let i = 0; i < 14; i++) {
+      const isl = new THREE.Group();
+      const rock = new THREE.Mesh(new THREE.ConeGeometry(rnd(4, 9), rnd(8, 14), 6), mats.island);
+      rock.rotation.x = Math.PI;
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(rock.geometry.parameters.radius, rock.geometry.parameters.radius * 0.95, 1.2, 6), mats.leaf);
+      top.position.y = rock.geometry.parameters.height / 2 + 0.4;
+      rock.position.y = 0;
+      isl.add(rock, top);
+      for (let k = 0; k < 3; k++) {
+        const t = makeTree();
+        t.position.set(rnd(-2, 2), top.position.y + 0.4, rnd(-2, 2));
+        isl.add(t);
+      }
+      placeIsland(isl, rnd(-300, 0));
+      scene.add(isl);
+      islands.push(isl);
+    }
+    function placeIsland(isl, z) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      isl.position.set(side * rnd(22, 60), rnd(-8, 12), z);
+      isl.userData.bob = rnd(0, 6);
+    }
+
+    // ================================================================
+    // Runner
+    // ================================================================
+    const runner = new THREE.Group();
+    scene.add(runner);
+    const skin = new THREE.MeshStandardMaterial({ color: '#f1c7a1', roughness: 0.7 });
+    const tunic = new THREE.MeshStandardMaterial({ color: '#2e6fa8', roughness: 0.6 });
+    const pants = new THREE.MeshStandardMaterial({ color: '#3b2f4a', roughness: 0.8 });
+    const scarfMat = new THREE.MeshStandardMaterial({ color: '#e5484d', roughness: 0.6 });
+    const body = new THREE.Group();
+    runner.add(body);
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.55, 4, 10), tunic);
+    torso.position.y = 1.15;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), skin);
+    head.position.y = 1.83;
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), pants);
+    hair.position.y = 1.86;
+    const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.08, 6, 14), scarfMat);
+    scarf.position.y = 1.55;
+    scarf.rotation.x = Math.PI / 2;
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.06, 0.7), scarfMat);
+    tail.position.set(0.1, 1.55, 0.45);
+    body.add(torso, head, hair, scarf, tail);
+    function limb(mat, len, x, y) {
+      const pivot = new THREE.Group();
+      pivot.position.set(x, y, 0);
+      const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, len, 4, 8), mat);
+      m.position.y = -len / 2 - 0.05;
+      pivot.add(m);
+      body.add(pivot);
+      return pivot;
+    }
+    const armL = limb(skin, 0.55, -0.45, 1.45);
+    const armR = limb(skin, 0.55, 0.45, 1.45);
+    const legL = limb(pants, 0.62, -0.17, 0.75);
+    const legR = limb(pants, 0.62, 0.17, 0.75);
+    runner.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+
+    // ================================================================
+    // Obstacles, coins and power-ups (pooled)
+    // ================================================================
+    const obstacles = [];
+    const coins = [];
+    const pickups = [];
+
+    // Each obstacle knows its box in lane space: lanes it blocks, and the height band it covers.
+    function makeObstacle(kind) {
+      const g = new THREE.Group();
+      if (kind === 'barrier') {
+        // Low fence: jump over it.
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.28, 0.3), mats.wood);
+        bar.position.y = 0.75;
+        const bar2 = bar.clone();
+        bar2.position.y = 0.35;
+        const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.95, 0.3), mats.trim);
+        p1.position.set(-0.9, 0.47, 0);
+        const p2 = p1.clone();
+        p2.position.x = 0.9;
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.06, 0.32), mats.warn);
+        stripe.position.y = 0.9;
+        g.add(bar, bar2, p1, p2, stripe);
+        g.userData.box = { y0: 0, y1: 0.95 };
+      } else if (kind === 'beam') {
+        // High beam on posts: slide under it.
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.45, 0.45), mats.wood);
+        beam.position.y = 1.55;
+        const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.75, 0.2), mats.trim);
+        p1.position.set(-0.98, 0.88, 0);
+        const p2 = p1.clone();
+        p2.position.x = 0.98;
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), mats.glow);
+        lamp.position.set(0, 1.2, 0);
+        g.add(beam, p1, p2, lamp);
+        g.userData.box = { y0: 1.15, y1: 1.9 };
+      } else {
+        // Stone block: change lanes.
+        const block = new THREE.Mesh(new THREE.BoxGeometry(1.9, 2.6, 1.4), mats.stone);
+        block.position.y = 1.3;
+        const rune = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.05), mats.warn);
+        rune.position.set(0, 1.5, 0.71);
+        rune.rotation.z = Math.PI / 4;
+        g.add(block, rune);
+        g.userData.box = { y0: 0, y1: 2.6 };
+      }
+      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      g.userData.kind = kind;
+      g.visible = false;
+      scene.add(g);
+      obstacles.push(g);
+      return g;
+    }
+    // Enough of each kind for full-width rows all the way to the horizon.
+    for (const k of ['barrier', 'beam', 'block']) for (let i = 0; i < 24; i++) makeObstacle(k);
+
+    const coinGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.08, 20);
+    coinGeo.rotateX(Math.PI / 2);
+    for (let i = 0; i < 70; i++) {
+      const c = new THREE.Mesh(coinGeo, mats.coin);
+      c.castShadow = true;
+      c.visible = false;
+      scene.add(c);
+      coins.push(c);
+    }
+    for (let i = 0; i < 3; i++) {
+      const m = new THREE.Group();
+      const u = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.11, 8, 16, Math.PI), mats.magnet);
+      u.rotation.z = Math.PI;
+      const tipMat = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 1.2 });
+      const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.22), tipMat);
+      t1.position.set(-0.32, 0.05, 0);
+      const t2 = t1.clone();
+      t2.position.x = 0.32;
+      m.add(u, t1, t2);
+      m.visible = false;
+      scene.add(m);
+      pickups.push(m);
+    }
+
+    const freeOf = (pool, kind) => pool.find((o) => !o.visible && (!kind || o.userData.kind === kind));
+
+    function placeObstacle(kind, lane, z) {
+      const o = freeOf(obstacles, kind);
+      if (!o) return;
+      o.position.set(LANE_X[lane], 0, z);
+      o.userData.lane = lane;
+      o.visible = true;
+    }
+
+    function placeCoinLine(lane, z, count, arcOver) {
+      for (let i = 0; i < count; i++) {
+        const c = freeOf(coins);
+        if (!c) return;
+        const t = count > 1 ? i / (count - 1) : 0;
+        c.position.set(LANE_X[lane], 0.9 + (arcOver ? Math.sin(t * Math.PI) * 2.2 : 0), z - i * 2.2 + (arcOver ? (count - 1) * 1.1 : 0));
+        c.userData.lane = lane;
+        c.userData.pulled = false;
+        c.visible = true;
+      }
+    }
+
+    // A row of obstacles. Every pattern leaves a way through: a free lane, a jump or a slide.
+    const PATTERNS = [
+      () => { const l = pick([0, 1, 2]); placeObstacle('block', l, SPAWN_Z); return [l]; },
+      () => { const free = pick([0, 1, 2]); [0, 1, 2].filter((l) => l !== free).forEach((l) => placeObstacle('block', l, SPAWN_Z)); return [free, 'coins'] },
+      () => { [0, 1, 2].forEach((l) => placeObstacle('barrier', l, SPAWN_Z)); return ['jump'] },
+      () => { [0, 1, 2].forEach((l) => placeObstacle('beam', l, SPAWN_Z)); return ['slide'] },
+      () => { const ls = [0, 1, 2].sort(() => Math.random() - 0.5); placeObstacle('block', ls[0], SPAWN_Z); placeObstacle('barrier', ls[1], SPAWN_Z); placeObstacle('beam', ls[2], SPAWN_Z); return [ls[1]] },
+      () => { const l = pick([0, 1, 2]); placeObstacle(pick(['barrier', 'beam']), l, SPAWN_Z); return [l] },
+    ];
+
+    function spawnRow(meters) {
+      // Early on, only the gentle patterns.
+      const pool = meters < 150 ? [0, 5, 2] : meters < 400 ? [0, 1, 2, 3, 5] : [0, 1, 2, 3, 4, 5];
+      const result = PATTERNS[pick(pool)]();
+      // Coins: a line in a free lane, or an arc over a fence.
+      if (result[0] === 'jump') placeCoinLine(pick([0, 1, 2]), SPAWN_Z, 5, true);
+      else if (Math.random() < 0.7) {
+        const lane = [0, 1, 2].find((l) => !obstacles.some((o) => o.visible && o.userData.lane === l && Math.abs(o.position.z - SPAWN_Z) < 1)) ?? 1;
+        placeCoinLine(lane, SPAWN_Z + 14, 6, false);
+      }
+      if (Math.random() < 0.05 && !magnetTime) {
+        const m = freeOf(pickups);
+        if (m) {
+          m.position.set(LANE_X[pick([0, 1, 2])], 1.1, SPAWN_Z + 8);
+          m.visible = true;
+        }
+      }
+    }
+
+    // ================================================================
+    // Particles: coin sparkles and crash debris
+    // ================================================================
+    const sparkGeo = new THREE.BufferGeometry();
+    const SPARKS = 220;
+    const sparkPos = new Float32Array(SPARKS * 3);
+    const sparkVel = new Float32Array(SPARKS * 3);
+    const sparkLife = new Float32Array(SPARKS);
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+    const sparkMat = new THREE.PointsMaterial({ color: '#ffd76a', size: 0.16, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const sparks = new THREE.Points(sparkGeo, sparkMat);
+    sparks.frustumCulled = false;
+    scene.add(sparks);
+    let sparkNext = 0;
+    function burst(pos, n, speed) {
+      for (let i = 0; i < n; i++) {
+        const k = sparkNext++ % SPARKS;
+        sparkPos.set([pos.x, pos.y, pos.z], k * 3);
+        sparkVel.set([rnd(-1, 1) * speed, rnd(0.2, 1.4) * speed, rnd(-1, 1) * speed], k * 3);
+        sparkLife[k] = rnd(0.4, 0.8);
+      }
+    }
+    function updateSparks(dt) {
+      for (let k = 0; k < SPARKS; k++) {
+        if (sparkLife[k] <= 0) { sparkPos[k * 3 + 1] = -999; continue; }
+        sparkLife[k] -= dt;
+        sparkVel[k * 3 + 1] += GRAVITY * 0.25 * dt;
+        sparkPos[k * 3] += sparkVel[k * 3] * dt;
+        sparkPos[k * 3 + 1] += sparkVel[k * 3 + 1] * dt;
+        sparkPos[k * 3 + 2] += sparkVel[k * 3 + 2] * dt + worldStep;
+      }
+      sparkGeo.attributes.position.needsUpdate = true;
+    }
+
+    // ================================================================
+    // Sound: made with Web Audio, no files
+    // ================================================================
+    let soundOn = store.get('sound', true);
+    let actx = null;
+    let master = null;
+    let musicTimer = null;
+    function audio() {
+      if (!actx) {
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        actx = new C();
+        master = actx.createGain();
+        master.gain.value = 0.45;
+        master.connect(actx.destination);
+      }
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
+    }
+    function tone(freq, dur, type = 'sine', vol = 0.2, slideTo) {
+      if (!soundOn || !audio()) return;
+      const t = actx.currentTime;
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(master);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+    function noise(dur, vol, freq) {
+      if (!soundOn || !audio()) return;
+      const buf = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const s = actx.createBufferSource();
+      s.buffer = buf;
+      const f = actx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = freq;
+      const g = actx.createGain();
+      g.gain.value = vol;
+      s.connect(f).connect(g).connect(master);
+      s.start();
+    }
+    const sfx = {
+      coin: () => { tone(1320, 0.09, 'square', 0.06); setTimeout(() => tone(1760, 0.12, 'square', 0.05), 55); },
+      jump: () => tone(300, 0.22, 'triangle', 0.18, 720),
+      slide: () => noise(0.3, 0.25, 900),
+      lane: () => tone(520, 0.06, 'sine', 0.06, 640),
+      magnet: () => [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => tone(f, 0.15, 'triangle', 0.12), i * 70)),
+      crash: () => { noise(0.6, 0.9, 500); tone(140, 0.5, 'sawtooth', 0.25, 50); },
+    };
+    // A soft pentatonic tune that loops while running.
+    const SCALE = [0, 2, 4, 7, 9, 12, 14, 16];
+    let musicStep = 0;
+    function startMusic() {
+      stopMusic();
+      musicTimer = setInterval(() => {
+        if (!soundOn || state !== 'running') return;
+        const root = [220, 196, 174.6, 196][Math.floor(musicStep / 8) % 4];
+        if (musicStep % 4 === 0) tone(root / 2, 0.5, 'triangle', 0.09);
+        if (Math.random() < 0.75) tone(root * Math.pow(2, pick(SCALE) / 12), 0.28, 'sine', 0.05);
+        musicStep++;
+      }, 220);
+    }
+    function stopMusic() { clearInterval(musicTimer); }
+
+    // ================================================================
+    // Game state
+    // ================================================================
+    let state = 'menu'; // menu | running | paused | over
+    let speed = START_SPEED;
+    let meters = 0;
+    let coinCount = 0;
+    let nextRowAt = 0;
+    let worldStep = 0;
+    let lane = 1;
+    let laneX = 0;
+    let vy = 0;
+    let py = 0;
+    let slideLeft = 0;
+    let magnetTime = 0;
+    let shake = 0;
+    let runClock = 0;
+    let biomeIndex = 0;
+    let best = store.get('best', 0);
+    const colorNow = {};
+    ['top', 'horizon', 'bottom', 'fog', 'sun', 'path', 'trim', 'leaf', 'trunk', 'glow', 'cloud'].forEach((k) => (colorNow[k] = new THREE.Color(BIOMES[0][k])));
+    let glowPower = BIOMES[0].glowPower;
+    let lightPower = BIOMES[0].light;
+    let ambientPower = BIOMES[0].ambient;
+
+    function showBest() {
+      ['best-hud', 'best-start', 'best-over'].forEach((id) => ($(id).textContent = best));
+    }
+
+    function resetRun() {
+      for (const o of [...obstacles, ...coins, ...pickups]) o.visible = false;
+      speed = START_SPEED;
+      meters = 0;
+      coinCount = 0;
+      nextRowAt = 40;
+      lane = 1;
+      laneX = 0;
+      vy = 0;
+      py = 0;
+      slideLeft = 0;
+      magnetTime = 0;
+      biomeIndex = 0;
+      runner.rotation.set(0, 0, 0);
+      body.scale.set(1, 1, 1);
+      body.position.y = 0;
+      $('power').hidden = true;
+      updateHud();
+    }
+
+    function startRun() {
+      resetRun();
+      state = 'running';
+      $('start').hidden = $('over').hidden = $('paused').hidden = true;
+      $('hud').hidden = false;
+      audio();
+      startMusic();
+      showBanner('Now entering', BIOMES[0].name);
+    }
+
+    function gameOver(reason) {
+      state = 'over';
+      shake = 0.6;
+      sfx.crash();
+      stopMusic();
+      burst(new THREE.Vector3(runner.position.x, py + 1, 0), 60, 7);
+      const score = Math.floor(meters) + coinCount * 10;
+      const isBest = score > best;
+      if (isBest) {
+        best = score;
+        store.set('best', best);
+      }
+      $('over-reason').textContent = reason;
+      $('r-dist').textContent = `${Math.floor(meters)} m`;
+      $('r-coins').textContent = coinCount;
+      $('r-score').textContent = score;
+      $('new-best').hidden = !isBest;
+      showBest();
+      setTimeout(() => {
+        $('over').hidden = false;
+        $('hud').hidden = true;
+        $('again-btn').focus();
+      }, 900);
+    }
+
+    function pause(on) {
+      if (on && state === 'running') {
+        state = 'paused';
+        $('paused').hidden = false;
+        $('resume-btn').focus();
+      } else if (!on && state === 'paused') {
+        state = 'running';
+        $('paused').hidden = true;
+        last = performance.now();
+      }
+    }
+
+    function updateHud() {
+      $('dist').textContent = Math.floor(meters);
+      $('coins').textContent = coinCount;
+    }
+
+    let bannerTimer;
+    function showBanner(small, title) {
+      $('banner-small').textContent = small;
+      $('banner-title').textContent = title;
+      $('banner').classList.add('show');
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => $('banner').classList.remove('show'), 2600);
+    }
+
+    // ================================================================
+    // Input: keyboard and swipes
+    // ================================================================
+    function move(dir) {
+      if (state !== 'running') return;
+      const next = Math.max(0, Math.min(2, lane + dir));
+      if (next !== lane) {
+        lane = next;
+        sfx.lane();
+      }
+    }
+    function jump() {
+      if (state !== 'running' || py > 0.01) return;
+      vy = JUMP_V;
+      slideLeft = 0;
+      sfx.jump();
+    }
+    function slide() {
+      if (state !== 'running') return;
+      if (py > 0.01) vy = Math.min(vy, -22); // dive down quickly from a jump
+      slideLeft = SLIDE_TIME;
+      sfx.slide();
+    }
+
+    addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', ' '].includes(k)) e.preventDefault();
+      if (state === 'menu' || state === 'over') {
+        if (k === 'enter' || k === ' ') startRun();
+        return;
+      }
+      if (k === 'p' || k === 'escape') return pause(state === 'running');
+      if (k === 'm') return toggleSound();
+      if (state !== 'running') return;
+      if (k === 'arrowleft' || k === 'a') move(-1);
+      else if (k === 'arrowright' || k === 'd') move(1);
+      else if (k === 'arrowup' || k === 'w' || k === ' ') jump();
+      else if (k === 'arrowdown' || k === 's') slide();
+    });
+
+    let touchStart = null;
+    addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button, label, input')) return;
+      touchStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+    });
+    addEventListener('pointerup', (e) => {
+      if (!touchStart) return;
+      const dx = e.clientX - touchStart.x;
+      const dy = e.clientY - touchStart.y;
+      touchStart = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1);
+      else if (dy < 0) jump();
+      else slide();
+    });
+
+    function toggleSound() {
+      soundOn = !soundOn;
+      store.set('sound', soundOn);
+      $('sound-btn').style.opacity = soundOn ? 1 : 0.45;
+      $('sound-btn').setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    }
+    $('sound-btn').style.opacity = soundOn ? 1 : 0.45;
+    $('sound-btn').addEventListener('click', toggleSound);
+    $('pause-btn').addEventListener('click', () => pause(true));
+    $('resume-btn').addEventListener('click', () => pause(false));
+    $('play-btn').addEventListener('click', startRun);
+    $('again-btn').addEventListener('click', startRun);
+    $('hq').addEventListener('change', (e) => {
+      highQuality = e.target.checked;
+      store.set('hq', highQuality);
+      applyQuality();
+    });
+    document.addEventListener('visibilitychange', () => document.hidden && pause(true));
+
+    // ================================================================
+    // Scenes: blend colors toward the current biome
+    // ================================================================
+    function blendBiome(dt) {
+      const b = BIOMES[biomeIndex];
+      const k = 1 - Math.exp(-dt * 1.2);
+      for (const key of Object.keys(colorNow)) colorNow[key].lerp(new THREE.Color(b[key]), k);
+      glowPower += (b.glowPower - glowPower) * k;
+      lightPower += (b.light - lightPower) * k;
+      ambientPower += (b.ambient - ambientPower) * k;
+
+      skyUniforms.top.value.copy(colorNow.top);
+      skyUniforms.horizon.value.copy(colorNow.horizon);
+      skyUniforms.bottom.value.copy(colorNow.bottom);
+      skyUniforms.sunColor.value.copy(colorNow.sun);
+      scene.fog.color.copy(colorNow.fog);
+      mats.path.color.copy(colorNow.path);
+      mats.trim.color.copy(colorNow.trim);
+      mats.leaf.color.copy(colorNow.leaf);
+      mats.trunk.color.copy(colorNow.trunk);
+      mats.glow.emissive.copy(colorNow.glow);
+      mats.glow.emissiveIntensity = glowPower;
+      cloudMat.color.copy(colorNow.cloud);
+      mountainMat.color.copy(colorNow.horizon).lerp(colorNow.top, 0.55).multiplyScalar(0.8);
+      sunLight.intensity = 1.8 * lightPower;
+      sunLight.color.copy(colorNow.sun);
+      hemi.intensity = ambientPower;
+      starMat.opacity = biomeIndex === 1 ? Math.min(1, starMat.opacity + dt * 0.5) : Math.max(0, starMat.opacity - dt * 0.5);
+      bloom.strength = biomeIndex === 1 ? 0.9 : 0.5;
+    }
+
+    // ================================================================
+    // Main loop
+    // ================================================================
+    const tmp = new THREE.Vector3();
+    let last = performance.now();
+    let menuClock = 0;
+
+    function update(dt) {
+      runClock += dt;
+      if (state === 'running') {
+        speed = Math.min(MAX_SPEED, speed + dt * 0.32);
+        worldStep = speed * dt;
+        meters += worldStep;
+        const newBiome = Math.floor(meters / BIOME_LENGTH) % BIOMES.length;
+        if (newBiome !== biomeIndex) {
+          biomeIndex = newBiome;
+          showBanner('Now entering', BIOMES[biomeIndex].name);
+          sfx.magnet();
+        }
+        if (meters >= nextRowAt) {
+          spawnRow(meters);
+          // Rows get closer together as speed rises, but never too tight to react.
+          nextRowAt = meters + Math.max(18, 30 - speed * 0.3) + rnd(0, 8);
+        }
+      } else if (state === 'menu') {
+        worldStep = 8 * dt; // the world drifts slowly behind the start screen
+        menuClock += dt;
+      } else {
+        worldStep = state === 'over' ? Math.max(0, worldStep * 0.9) : 0;
+      }
+
+      // --- move the world toward the camera ---
+      for (const t of tiles) {
+        t.position.z += worldStep;
+        if (t.position.z > TILE_LEN * 1.5) {
+          t.position.z -= TILE_COUNT * TILE_LEN;
+          decorateTile(t);
+        }
+      }
+      for (const c of clouds) {
+        c.position.z += worldStep * 0.35;
+        if (c.position.z > 40) c.position.z -= 300;
+      }
+      for (const isl of islands) {
+        isl.position.z += worldStep * 0.25;
+        isl.position.y += Math.sin(runClock * 0.6 + isl.userData.bob) * 0.004;
+        if (isl.position.z > 40) placeIsland(isl, -300);
+      }
+
+      // --- runner physics ---
+      if (state === 'running' || state === 'menu') {
+        const targetX = LANE_X[lane];
+        laneX += (targetX - laneX) * (1 - Math.exp(-dt * 14));
+        runner.position.x = laneX;
+        vy += GRAVITY * dt;
+        py = Math.max(0, py + vy * dt);
+        if (py === 0) vy = 0;
+        slideLeft = Math.max(0, slideLeft - dt);
+        runner.position.y = py;
+        runner.rotation.z = (laneX - targetX) * 0.18;
+        // Run cycle.
+        const pace = state === 'running' ? speed * 0.55 : 5;
+        const swing = py > 0 ? 0.3 : Math.sin(runClock * pace) * 0.9;
+        armL.rotation.x = swing;
+        armR.rotation.x = -swing;
+        legL.rotation.x = py > 0 ? -0.8 : -swing;
+        legR.rotation.x = py > 0 ? 0.4 : swing;
+        body.position.y = py > 0 ? 0 : Math.abs(Math.cos(runClock * pace)) * 0.08;
+        tail.rotation.x = Math.sin(runClock * 12) * 0.25;
+        // Slide: crouch low and lean back.
+        const sliding = slideLeft > 0;
+        body.scale.y += ((sliding ? 0.48 : 1) - body.scale.y) * (1 - Math.exp(-dt * 18));
+        body.rotation.x = sliding ? -0.35 : 0;
+      }
+
+      // --- obstacles ---
+      const height = slideLeft > 0 ? 0.9 : 1.75;
+      for (const o of obstacles) {
+        if (!o.visible) continue;
+        const z0 = o.position.z;
+        o.position.z += worldStep;
+        if (o.position.z > 12) { o.visible = false; continue; }
+        if (state !== 'running') continue;
+        const depth = o.userData.kind === 'block' ? 0.95 : 0.4;
+        const overlapsZ = z0 < depth && o.position.z > -depth;
+        if (overlapsZ && Math.abs(o.position.x - laneX) < 1.25) {
+          const { y0, y1 } = o.userData.box;
+          if (py < y1 && py + height > y0) {
+            const reason = o.userData.kind === 'barrier' ? 'You tripped on a fence' : o.userData.kind === 'beam' ? 'You hit a beam' : 'You ran into a stone block';
+            gameOver(reason);
+          }
+        }
+      }
+
+      // --- coins ---
+      for (const c of coins) {
+        if (!c.visible) continue;
+        c.position.z += worldStep;
+        c.rotation.y += dt * 4;
+        if (state === 'running' && magnetTime > 0 && c.position.z > -26) {
+          c.position.lerp(tmp.set(laneX, py + 1, 0), 1 - Math.exp(-dt * 9));
+        }
+        if (c.position.z > 10) { c.visible = false; continue; }
+        if (state === 'running' && c.position.z > -0.8 && c.position.z - worldStep < 0.8 && Math.abs(c.position.x - laneX) < 0.9 && c.position.y > py - 0.2 && c.position.y < py + height + 0.4) {
+          c.visible = false;
+          coinCount++;
+          burst(c.position, 10, 3);
+          sfx.coin();
+        }
+      }
+      for (const m of pickups) {
+        if (!m.visible) continue;
+        m.position.z += worldStep;
+        m.rotation.y += dt * 3;
+        m.position.y = 1.1 + Math.sin(runClock * 4) * 0.2;
+        if (m.position.z > 10) { m.visible = false; continue; }
+        if (state === 'running' && Math.abs(m.position.z) < 0.9 && Math.abs(m.position.x - laneX) < 1 && py < 2) {
+          m.visible = false;
+          magnetTime = 8;
+          sfx.magnet();
+          burst(m.position, 24, 4);
+        }
+      }
+      if (magnetTime > 0 && state === 'running') {
+        magnetTime = Math.max(0, magnetTime - dt);
+        $('power').hidden = false;
+        $('power').textContent = `Coin magnet · ${Math.ceil(magnetTime)}s`;
+        if (!magnetTime) $('power').hidden = true;
+      }
+
+      updateSparks(dt);
+      blendBiome(dt);
+
+      // --- camera follows, with a little sway and crash shake ---
+      const camX = laneX * 0.55 + (state === 'menu' ? Math.sin(menuClock * 0.3) * 1.2 : 0);
+      camera.position.x += (camX - camera.position.x) * (1 - Math.exp(-dt * 5));
+      camera.position.y = 4.4 + py * 0.35 + (shake > 0 ? rnd(-1, 1) * shake * 0.4 : 0);
+      camera.position.z = 8.2 + (shake > 0 ? rnd(-1, 1) * shake * 0.3 : 0);
+      camera.fov += ((state === 'running' ? 62 + (speed - START_SPEED) * 0.35 : 60) - camera.fov) * (1 - Math.exp(-dt * 2));
+      camera.updateProjectionMatrix();
+      camera.lookAt(laneX * 0.4, 1.4 + py * 0.2, -10);
+      shake = Math.max(0, shake - dt);
+      sunLight.position.set(runner.position.x - 8, 14, 6);
+      sunLight.target.position.set(runner.position.x, 0, -4);
+
+      if (state === 'running') updateHud();
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (state !== 'paused') update(dt);
+      if (highQuality) composer.render();
+      else renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+    });
+
+    // ================================================================
+    // Start
+    // ================================================================
+    if (location.hash === '#debug') {
+      window.__lantern = { skip: (m) => { meters = m; nextRowAt = m + 20; }, state: () => ({ state, meters, coinCount, biome: BIOMES[biomeIndex].name }) };
+    }
+
+    applyQuality();
+    showBest();
+    blendBiome(10);
+    $('loading').hidden = true;
+    $('play-btn').focus();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
